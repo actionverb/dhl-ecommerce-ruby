@@ -146,9 +146,11 @@ module DHL
             "billingRef1": reference,
             "billingRef2": batch,
             "currency": "USD",
+            "dutiesPaid": "N",
             "mailType": MAIL_TYPES.fetch(mail_type ? mail_type.downcase.to_sym : :parcel_select_machinable), # TODO
             "orderedProduct": product_id,
             "packageId": customer_confirmation_number,
+            "packageDesc": "Goods",
             "packageRefName": customer_confirmation_number_label,
             "service": service ? SERVICES.fetch(service.downcase.to_sym) : nil,
             "serviceEndorsement": service_endorsement ? SERVICE_ENDORSEMENTS.fetch(service_endorsement.downcase.to_sym) : nil,
