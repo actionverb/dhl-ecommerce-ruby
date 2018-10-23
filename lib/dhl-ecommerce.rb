@@ -69,7 +69,8 @@ module DHL
         request("get", "https://api.dhlglobalmail.com/v1/auth/access_token", username: @username, password: @password, state: Time.now.to_i)[:access_token]
       end
 
-      def request(method, url, params = nil, &block)
+      def request(method, url, params = nil, api_version = :v1, &block)
+        client = send("api_client_#{api_version}")
         client.params = params || {
           client_id: client_id,
           access_token: access_token
@@ -109,10 +110,18 @@ module DHL
 
       private
 
-      def client
-        @client ||= Faraday.new url: "https://api.dhlglobalmail.com/v1/", headers: { accept: "application/xml", content_type: "application/xml;charset=UTF-8" } do |c|
+      def api_client_v1
+        @api_client_v1 ||= Faraday.new url: "https://api.dhlglobalmail.com/v1/", headers: { accept: "application/xml", content_type: "application/xml;charset=UTF-8" } do |c|
           c.response :rashify
           c.response :xml, :content_type => /\bxml$/
+          c.adapter :net_http
+        end
+      end
+
+      def api_client_v2
+        @api_client_v2 ||= Faraday.new url: "https://api.dhlglobalmail.com/v2/", headers: { accept: "application/json", content_type: "application/json;charset=UTF-8" } do |c|
+          c.response :rashify
+          c.response :json, :content_type => /\bjson$/
           c.adapter :net_http
         end
       end

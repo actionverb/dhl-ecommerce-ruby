@@ -322,12 +322,12 @@ module DHL
 
             json = { "shipments": [ {
               "pickup": location_id,
-              "distributionCenter": FACILITIES.fetch(facility.downcase.to_sym),
+              "distributionCenter": FACILITIES.fetch(labels.first.facility.downcase.to_sym),
               "packages": labels.map(&:json)
             } ] }.to_json
 
             url = "https://api.dhlglobalmail.com/v2/#{self.resource_name.downcase}/multi/#{client.label_format == :zpl ? "zpl" : "image"}"
-            response = client.request :post, url do |request|
+            response = client.request(:post, url, {}, :v2) do |request|
               request.body = json
             end
 
