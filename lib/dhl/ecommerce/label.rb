@@ -345,6 +345,13 @@ module DHL
             end
           end
         end.flatten
+      rescue DHL::Ecommerce::Errors::ValidationError => e
+        if e.message =~ /label has already been created for Package Id/
+          attributes.each do |a|
+            a[:customer_confirmation_number] = "#{Time.now.to_i}#{rand(1000)}"
+          end
+          create_in_batches_v2(attributes, client)
+        end
       end
 
     end
