@@ -246,6 +246,8 @@ module DHL
                 label.instance_variable_set :@service_type, label_response[:label_detail][:service_type_code].to_i if label_response[:label_detail][:service_type_code]
               end
 
+              label.instance_variable_set :@tracking_number, label_response[:delcon_from_impb] if label_response[:delcon_from_impb]
+
               label
             end
           end
