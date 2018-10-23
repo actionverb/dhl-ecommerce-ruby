@@ -1,5 +1,5 @@
 module DHL
   module Ecommerce
-    VERSION = "1.0.6av7"
+    VERSION = "1.0.6av9"
   end
 end

@@ -17,6 +17,7 @@ require "dhl/ecommerce/operations/list"
 # Resources
 require "dhl/ecommerce/base"
 require "dhl/ecommerce/account"
+require "dhl/ecommerce/customs_item"
 require "dhl/ecommerce/event"
 require "dhl/ecommerce/impb"
 require "dhl/ecommerce/label"

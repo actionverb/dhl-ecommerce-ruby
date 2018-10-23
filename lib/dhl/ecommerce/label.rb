@@ -1,7 +1,7 @@
 module DHL
   module Ecommerce
     class Label < Base
-      attr_accessor :customer_confirmation_number, :service_endorsement, :reference, :batch, :mail_type, :facility, :expected_ship_date, :weight, :consignee_address, :return_address, :service
+      attr_accessor :customer_confirmation_number, :customer_confirmation_number_label, :service_endorsement, :reference, :batch, :mail_type, :facility, :expected_ship_date, :weight, :consignee_address, :return_address, :service
       attr_reader :id, :location_id, :product_id, :events, :service_type, :impb
 
       FACILITIES = {
@@ -137,6 +137,67 @@ module DHL
         end
       end
 
+      def json
+        {
+          "consigneeAddress": json_consignee_address,
+          "returnAddress": json_return_address,
+          "customsDetails": json_customs_details,
+          "packageDetails": {
+            "billingRef1": reference,
+            "billingRef2": batch,
+            "currency": "USD",
+            "mailType": MAIL_TYPES.fetch(mail_type ? mail_type.downcase.to_sym : :parcel_select_machinable), # TODO
+            "orderedProduct": product_id,
+            "packageId": customer_confirmation_number,
+            "packageRefName": customer_confirmation_number_label,
+            "service": service ? SERVICES.fetch(service.downcase.to_sym) : nil,
+            "serviceEndorsement": service_endorsement ? SERVICE_ENDORSEMENTS.fetch(service_endorsement.downcase.to_sym) : nil,
+            "weight": weight,
+            "weightUom": "LB"
+          }
+        }.compact
+      end
+
+      def json_consignee_address
+        {
+          name: consignee_address.name,
+          companyName: consignee_address.firm,
+          address1: consignee_address.address_1,
+          address2: consignee_address.address_2,
+          city: consignee_address.city,
+          state: consignee_address.state.to_s.upcase,
+          postalCode: consignee_address.postal_code,
+          country: consignee_address.country.to_s.upcase,
+          phone: consignee_address.phone,
+        }
+      end
+
+      def json_return_address
+        {
+          name: return_address.name,
+          companyName: return_address.firm,
+          address1: return_address.address_1,
+          address2: return_address.address_2,
+          city: return_address.city,
+          state: return_address.state.to_s.upcase,
+          postalCode: return_address.postal_code,
+          country: return_address.country.to_s.upcase,
+        }
+      end
+
+      def json_customs_details
+        customs_items.map { |item|
+          {
+            itemDescription: item.description,
+            countryOfOrigin: item.country_of_origin,
+            hsCode: item.hts_code,
+            packagedQuantity: item.quantity,
+            itemValue: item.value,
+            skuNumber: item.sku
+          }
+        }
+      end
+
       private
 
       def xml
@@ -146,7 +207,7 @@ module DHL
 
           xml.PackageRef do
             xml.PrintFlag customer_confirmation_number.present?
-            # xml.LabelText ""
+            xml.LabelText customer_confirmation_number_label
           end
 
           xml.ConsigneeAddress do
@@ -253,6 +314,37 @@ module DHL
           end
         end.flatten
       end
+
+      def self.create_in_batches_v2(attributes, client = DHL::Ecommerce.client)
+        attributes.group_by do |value| value[:location_id] end.each.collect do |location_id, location_attributes|
+          location_attributes.each_slice(1).collect do |slice|
+            labels = slice.map { |slice_attributes| new(slice_attributes) }
+
+            json = { "shipments": [ {
+              "pickup": location_id,
+              "distributionCenter": FACILITIES.fetch(facility.downcase.to_sym),
+              "packages": labels.map(&:json)
+            } ] }.to_json
+
+            url = "https://api.dhlglobalmail.com/v2/#{self.resource_name.downcase}/multi/#{client.label_format == :zpl ? "zpl" : "image"}"
+            response = client.request :post, url do |request|
+              request.body = json
+            end
+
+            labels.zip(response[:shipments].first[:packages]).map do |label, package|
+              if label_response = package[:response_details]
+                if label_details = label_response[:label_details]&.first
+                  label.instance_variable_set :@id, label_details[:mail_item_id].to_i if label_details[:package_id]
+                  label.instance_variable_set :@file, label_details[:label_data] if label_details[:label_data]
+                end
+                label.instance_variable_set :@tracking_number, label_response[:tracking_number] if label_response[:tracking_number]
+              end
+              label
+            end
+          end
+        end.flatten
+      end
+
     end
   end
 end
