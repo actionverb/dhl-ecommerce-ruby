@@ -53,7 +53,7 @@ module DHL
       end
 
       def location
-        @location ||= DHL::Ecommerce::Location.find location_id
+        @location ||= DHL::Ecommerce::Location.find(location_id, client)
       end
 
       def location=(location)
@@ -67,7 +67,7 @@ module DHL
       end
 
       def product
-        @product ||= DHL::Ecommerce::Product.find product_id
+        @product ||= DHL::Ecommerce::Product.find(product_id, client)
       end
 
       def product=(product)
@@ -76,7 +76,7 @@ module DHL
       end
 
       def file
-        @base64_decoded_file ||= StringIO.new(DHL::Ecommerce.label_format == :zpl ? @file : Base64.decode64(@file))
+        @base64_decoded_file ||= StringIO.new(client.label_format == :zpl ? @file : Base64.decode64(@file))
       end
 
       def self.create(attributes)
@@ -88,8 +88,8 @@ module DHL
         array ? labels : labels.first
       end
 
-      def self.find(id)
-        attributes = DHL::Ecommerce.request :get, "https://api.dhlglobalmail.com/v1/mailitems/track" do |request|
+      def self.find(id, client = DHL::Ecommerce.client)
+        attributes = client.request :get, "https://api.dhlglobalmail.com/v1/mailitems/track" do |request|
           request.params[:number] = id
         end
 
@@ -197,9 +197,9 @@ module DHL
         end
       end
 
-      def self.create_in_batches(attributes)
+      def self.create_in_batches(attributes, client = DHL::Ecommerce.client)
         attributes.group_by do |value| value[:location_id] end.each.collect do |location_id, location_attributes|
-          case DHL::Ecommerce.label_format
+          case client.label_format
           when :png, :image
             url = "https://api.dhlglobalmail.com/v1/#{self.resource_name.downcase}/US/#{location_id}/image"
           when :zpl
@@ -225,7 +225,7 @@ module DHL
               end
             end
 
-            response = DHL::Ecommerce.request :post, url do |request|
+            response = client.request :post, url do |request|
               request.body = xml.target!
             end
 
@@ -234,7 +234,7 @@ module DHL
             labels.zip(response[:mpu_list][:mpu]).map do |label, label_response|
               label.instance_variable_set :@id, label_response[:mail_item_id].to_i if label_response[:mail_item_id]
 
-              case DHL::Ecommerce.label_format
+              case client.label_format
               when :png, :image
                 label.instance_variable_set :@file, label_response[:label_image] if label_response[:label_image]
               when :zpl

@@ -1,6 +1,8 @@
 module DHL
   module Ecommerce
     class Base
+      attr_reader :client
+
       def initialize(attributes = {})
         attributes.each do |attribute, value|
           next if attribute.to_sym == :class
@@ -10,7 +12,7 @@ module DHL
           elsif respond_to?("#{attribute}")
             instance_variable_set "@#{attribute}", value
           end
-        end unless attributes.empty?
+        end
       end
 
       private

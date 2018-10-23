@@ -17,7 +17,7 @@ module DHL
       end
 
       def account
-        @account ||= DHL::Ecommerce::Account.find(account_id)
+        @account ||= DHL::Ecommerce::Account.find(account_id, client)
       end
     end
   end

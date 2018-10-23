@@ -18,7 +18,7 @@ and `password` or an `access_token`.
 
 ```ruby
 # DHL e-Commerce configuration.
-DHL::Ecommerce.configure do |config|
+client = DHL::Ecommerce.configure do |config|
   config.username = "meowbox"
   config.password = "password"
   config.client_id = 6369
@@ -111,3 +111,30 @@ A few supporting models are also available.
 - `Imbp`
 - `Product`
 - `StandardAddress`
+
+
+## Thread-safe usage for cases where you may have multiple configurations active at once
+
+Service providers who deal with multiple DHL accounts (for example
+fulfillment companies) may need to access multiple accounts in the same
+session.  To do so, you can create separate client instances for the API
+like so:
+
+```ruby
+client = DHL::Ecommerce::Client.new(6369,
+  username: "meowbox",
+  password: password",
+  label_format: :zpl
+)
+```
+
+You may pass the client as the final parameter to any `all` or `find`
+method.  Additionally, there are list methods available on the client
+instance itself, such as:
+
+```
+client.accounts
+client.locations
+```
+
+... etc.
