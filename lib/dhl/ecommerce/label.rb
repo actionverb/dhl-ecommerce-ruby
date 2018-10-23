@@ -1,7 +1,7 @@
 module DHL
   module Ecommerce
     class Label < Base
-      attr_accessor :customer_confirmation_number, :customer_confirmation_number_label, :service_endorsement, :reference, :batch, :mail_type, :facility, :expected_ship_date, :weight, :consignee_address, :return_address, :service
+      attr_accessor :customer_confirmation_number, :customer_confirmation_number_label, :service_endorsement, :reference, :batch, :mail_type, :facility, :expected_ship_date, :weight, :consignee_address, :return_address, :service, :customs_items
       attr_reader :id, :location_id, :product_id, :events, :service_type, :impb
 
       FACILITIES = {
