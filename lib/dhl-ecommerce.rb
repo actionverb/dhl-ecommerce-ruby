@@ -80,7 +80,7 @@ module DHL
           when "INVALID_CLIENT_ID", "INVALID_KEY", "INVALID_TOKEN", "INACTIVE_KEY"
             if !@refreshed_access_token
               @access_token = nil
-              retry
+              return request(method, url, params, &block)
             end
             raise Errors::AuthenticationError.new response.body.response.meta.error.error_message, response
           when "VALIDATION_ERROR", "INVALID_FACILITY_CODE"
