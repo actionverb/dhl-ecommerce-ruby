@@ -2,7 +2,7 @@ module DHL
   module Ecommerce
     class Label < Base
       attr_accessor :customer_confirmation_number, :customer_confirmation_number_label, :service_endorsement, :reference, :batch, :mail_type, :facility, :expected_ship_date, :weight, :consignee_address, :return_address, :service, :customs_items
-      attr_reader :id, :location_id, :product_id, :events, :service_type, :impb
+      attr_reader :id, :location_id, :product_id, :events, :service_type, :impb, :client, :tracking_number
 
       FACILITIES = {
         auburn: "USSEA1",
@@ -95,7 +95,7 @@ module DHL
 
         attributes[:mail_items][:mail_item] = attributes[:mail_items][:mail_item].first if attributes[:mail_items][:mail_item].is_a? Array
 
-        new attributes[:mail_items][:mail_item]
+        new attributes[:mail_items][:mail_item].merge(client: client)
       end
 
       def initialize(attributes = {})
@@ -271,7 +271,7 @@ module DHL
           # at once but as it turns out, they don't.
           location_attributes.each_slice(1).collect do |slice|
             labels = slice.map do |slice_attributes|
-              new slice_attributes
+              new slice_attributes.merge(client: client)
             end
 
             xml = Builder::XmlMarkup.new
@@ -318,7 +318,7 @@ module DHL
       def self.create_in_batches_v2(attributes, client = DHL::Ecommerce.client)
         attributes.group_by do |value| value[:location_id] end.each.collect do |location_id, location_attributes|
           location_attributes.each_slice(1).collect do |slice|
-            labels = slice.map { |slice_attributes| new(slice_attributes) }
+            labels = slice.map { |slice_attributes| new(slice_attributes.merge(client: client)) }
 
             json = { "shipments": [ {
               "pickup": location_id,
