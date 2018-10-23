@@ -27,5 +27,4 @@ Gem::Specification.new do |s|
   s.add_dependency "faraday_middleware", ">= 0.10.0"
   s.add_dependency "hashie",  "~> 3"
   s.add_dependency "multi_xml"
-  s.add_dependency "rash", "0.4.0"
 end
