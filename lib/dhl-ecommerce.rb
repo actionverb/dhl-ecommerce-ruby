@@ -87,22 +87,25 @@ module DHL
         body = (response.body.response || response.body)
 
         if response.status >= 300
-          error = body.meta.error
-          case error.error_type
-          when "INVALID_CLIENT_ID", "INVALID_KEY", "INVALID_TOKEN", "INACTIVE_KEY"
-            if !@refreshed_access_token[api_version.to_sym]
-              @access_token = nil if api_version == :v1
-              @access_token_v2 = nil if api_version == :v2
-              return request(method, url, params, api_version, &block)
-            end
-            raise Errors::AuthenticationError.new error.error_message, response
-          when "VALIDATION_ERROR", "INVALID_FACILITY_CODE"
-            errors = body.data&.mpu_list&.mpu&.error_list&.error
-            errors = [errors] unless errors.is_a? Array
+          if error = body.meta.error&.first
+            case error.error_type
+            when "INVALID_CLIENT_ID", "INVALID_KEY", "INVALID_TOKEN", "INACTIVE_KEY"
+              if !@refreshed_access_token[api_version.to_sym]
+                @access_token = nil if api_version == :v1
+                @access_token_v2 = nil if api_version == :v2
+                return request(method, url, params, api_version, &block)
+              end
+              raise Errors::AuthenticationError.new error.error_message, response
+            when "VALIDATION_ERROR", "INVALID_FACILITY_CODE"
+              errors = body.data&.mpu_list&.mpu&.error_list&.error
+              errors = [errors] unless errors.is_a? Array
 
-            raise Errors::ValidationError.new error.error_message, response, errors
-          else
-            raise Errors::BaseError.new error.error_message, response
+              raise Errors::ValidationError.new error.error_message, response, errors
+            else
+              raise Errors::BaseError.new error.error_message, response
+            end
+          elsif errors = body.data.shipments&.first&.packages&.first&.errors
+            raise Errors::ValidationError.new errors.first.error_message, response, errors
           end
         end
 
