@@ -57,45 +57,56 @@ module DHL
         @access_token = options[:access_token]
         @client_id = client_id
         @label_format = :png
-        @refreshed_access_token = false
+        @refreshed_access_token = {}
       end
 
       def access_token
         @access_token ||= refresh_access_token
       end
 
-      def refresh_access_token
-        @refreshed_access_token = true
-        request("get", "https://api.dhlglobalmail.com/v1/auth/access_token", username: @username, password: @password, state: Time.now.to_i)[:access_token]
+      def access_token_v1
+        access_token
+      end
+
+      def access_token_v2
+        @access_token_v2 ||= refresh_access_token(:v2)
+      end
+
+      def refresh_access_token(api_version = :v1)
+        @refreshed_access_token[api_version] = true
+        request("get", "https://api.dhlglobalmail.com/#{api_version}/auth/access_token", { username: @username, password: @password, state: Time.now.to_i }, api_version)[:access_token]
       end
 
       def request(method, url, params = nil, api_version = :v1, &block)
         client = send("api_client_#{api_version}")
         client.params = params || {
           client_id: client_id,
-          access_token: access_token
+          access_token: send("access_token_#{api_version}")
         }
         response = client.run_request method.downcase.to_sym, url, nil, nil, &block
+        body = (response.body.response || response.body)
 
         if response.status >= 300
-          case response.body.response.meta.error.error_type
+          error = body.meta.error
+          case error.error_type
           when "INVALID_CLIENT_ID", "INVALID_KEY", "INVALID_TOKEN", "INACTIVE_KEY"
-            if !@refreshed_access_token
-              @access_token = nil
-              return request(method, url, params, &block)
+            if !@refreshed_access_token[api_version.to_sym]
+              @access_token = nil if api_version == :v1
+              @access_token_v2 = nil if api_version == :v2
+              return request(method, url, params, api_version, &block)
             end
-            raise Errors::AuthenticationError.new response.body.response.meta.error.error_message, response
+            raise Errors::AuthenticationError.new error.error_message, response
           when "VALIDATION_ERROR", "INVALID_FACILITY_CODE"
-            errors = response.body.response.data.mpu_list.mpu.error_list.error
+            errors = body.data&.mpu_list&.mpu&.error_list&.error
             errors = [errors] unless errors.is_a? Array
 
-            raise Errors::ValidationError.new response.body.response.meta.error.error_message, response, errors
+            raise Errors::ValidationError.new error.error_message, response, errors
           else
-            raise Errors::BaseError.new response.body.response.meta.error.error_message, response
+            raise Errors::BaseError.new error.error_message, response
           end
         end
 
-        response.body.response.data
+        body.data
       end
 
       [ Account, Event, Label, Location, Product ].each do |model|
