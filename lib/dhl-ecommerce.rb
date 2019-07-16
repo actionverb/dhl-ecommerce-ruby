@@ -88,6 +88,9 @@ module DHL
 
         if response.status >= 300
           if error = body.meta.error&.first
+            if error.is_a?(Array)
+              error = OpenStruct.new(error_type: error[1])
+            end
             case error.error_type
             when "INVALID_CLIENT_ID", "INVALID_KEY", "INVALID_TOKEN", "INACTIVE_KEY"
               if !@refreshed_access_token[api_version.to_sym]
