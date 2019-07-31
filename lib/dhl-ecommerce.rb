@@ -103,12 +103,12 @@ module DHL
               errors = body.data&.mpu_list&.mpu&.error_list&.error
               errors = [errors] unless errors.is_a? Array
 
-              raise Errors::ValidationError.new error.error_message, response, errors
+              raise Errors::ValidationError.new error.error_message || error.error_type, response, errors
             else
-              raise Errors::BaseError.new error.error_message, response
+              raise Errors::BaseError.new error.error_message || error.error_type, response
             end
           elsif errors = body.data.shipments&.first&.packages&.first&.errors
-            raise Errors::ValidationError.new errors.first.error_message, response, errors
+            raise Errors::ValidationError.new errors.first.error_message || errors.first.error_type, response, errors
           end
         end
 
