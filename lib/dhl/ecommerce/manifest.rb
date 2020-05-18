@@ -59,7 +59,7 @@ module DHL
             request.body = json
           end
 
-          response[:data].first[:closeouts].first[:manifests].map { |manifest|
+          response[:data][:closeouts].first[:manifests].map { |manifest|
             new manifest.merge(location_id: location_id)
           }
         }.flatten
