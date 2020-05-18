@@ -336,7 +336,7 @@ module DHL
             labels.zip(response[:shipments].first[:packages]).map do |label, package|
               if label_response = package[:response_details]
                 if label_details = label_response[:label_details]&.first
-                  label.instance_variable_set :@id, label_details[:mail_item_id].to_i if label_details[:package_id]
+                  label.instance_variable_set :@id, label_details[:package_id].to_i if label_details[:package_id]
                   label.instance_variable_set :@file, label_details[:label_data] if label_details[:label_data]
                 end
                 label.instance_variable_set :@tracking_number, label_response[:tracking_number] if label_response[:tracking_number]

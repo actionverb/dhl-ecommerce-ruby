@@ -45,6 +45,25 @@ module DHL
           end
         end.flatten
       end
+
+      def self.create_v2(labels, client = DHL::Ecommerce.client)
+        labels.group_by(&:location_id).each.map { |location_id, location_labels|
+          json = { "closeoutRequests": [ {
+            "packages": location_labels.map { |label|
+              { "packageId": label.customer_confirmation_number }
+            }
+          } ] }.to_json
+
+          url = "https://api.dhlglobalmail.com/v2/locations/#{location_id}/closeout/multi"
+          response = client.request(:post, url, nil, :v2) do |request|
+            request.body = json
+          end
+
+          response[:data].first[:closeouts].first[:manifests].map { |manifest|
+            new manifest.merge(location_id: location_id)
+          }
+        }.flatten
+      end
     end
   end
 end
